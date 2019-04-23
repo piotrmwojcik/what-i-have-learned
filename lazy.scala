@@ -1,28 +1,4 @@
-
 import scala.annotation.tailrec
-
-
-sealed trait Either[+E, +A] {
-  def map[B](f: A => B): Either[E, B] = this match {
-    case Right(v) => Right(f(v))
-    case Left(e) => Left(e)
-  }
-
-  def flatMap[EE >: E, B](f: A => Either[EE, B]): Either[EE, B] = this match {
-    case Right(v) => f(v)
-    case Left(e) => Left(e)
-  }
-
-  def orElse[EE >: E, B >: A](b: => Either[EE, B]): Either[EE, B] = this match {
-    case Left(_) => b
-    case Right(v) => Right(v)
-  }
-
-  def map2[EE >: E, B, C](b: Either[EE, B])(f: (A, B) => C): Either[EE, C] =
-    this flatMap (v => b.map(hh => f(v, hh)))
-}
-case class Left[+E](value: E) extends Either[E, Nothing]
-case class Right[+A](value: A) extends Either[Nothing, A]
 
 sealed trait Stream[+A] {
   def toList: List[A] = {
@@ -46,6 +22,12 @@ sealed trait Stream[+A] {
     case Cons(h, t) => f(h(), t().foldRight(z)(f))
     case _ => z
   }
+
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] = this.foldRight((z, Stream(z)))((a, p0) => {
+    lazy val p1 = p0
+    val b = f(a, p1._1)
+    (b, Stream.cons(b, p1._2))
+  })._2
 
   def exists(p: A => Boolean): Boolean = foldRight(false)((a, b) => p(a) ||b)
 
@@ -135,18 +117,7 @@ object Stream {
 }
 
 object test extends App {
-
-  def traverse[E, A, B](as: List[A])(f: A => Either[E, B]): Either[E, List[B]] =
-    as.foldRight[Either[E, List[B]]](Right(Nil))((a, b) => f(a).map2(b)(_ :: _))
-
-  def map2[A, B, C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = a.flatMap(aa => b.map(bb => f(aa, bb)))
-
-  /*def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = a match {
-    case Nil => Some(Nil)
-    case h::t => map2(f(h), traverse(t)(f))(_ :: _)
-  }*/
-
-
+  println(Stream(1, 2, 3).scanRight(0)(_ + _).toList)
   println(Stream(1, 2, 3, 4, 5, 6, 7).zipAll(Stream(1, 2, 3)).toList)
   println(Stream(1, 2, 3, 4, 5, 6).toList)
   println(Stream(1, 2, 3, 4, 5, 6).take(3).toList)
