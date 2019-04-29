@@ -12,5 +12,15 @@ case class SimpleRNG(seed: Long) extends RNG {
   }
 }
 
-object test extends App {}
+object SimpleRNG {
+  def nonNegativeInt(rng: RNG): (Int, RNG) = rng.nextInt match {
+    case (Int.MaxValue, r: RNG) => nonNegativeInt(r)
+    case (n: Int, r: RNG) if (n > 0) => (n, r)
+    case (n: Int, r: RNG) => (-n, r)
+  }
+}
+
+object random extends App {
+  println(SimpleRNG.nonNegativeInt(new SimpleRNG(26051989)))
+}
 

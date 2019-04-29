@@ -1,5 +1,3 @@
-package research.piotrw
-
 import scala.annotation.tailrec
 
 sealed trait Stream[+A] {
