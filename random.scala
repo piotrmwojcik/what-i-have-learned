@@ -63,10 +63,25 @@ object SimpleRNG {
   def map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
     val (a, rng2) = s(rng)
     (f(a), rng2)
-    (f(a), rng2)
   }
 
-  def double_: Rand[Double] = map(int)(_ / (Int.MaxValue.toDouble + 1))
+  def _double: Rand[Double] = map(nonNegativeInt)(_ / (Int.MaxValue.toDouble + 1))
+
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = rng => {
+    val (a, rb1) = ra(rng)
+    val (b, rb2) = rb(rb1)
+    (f(a, b), rb2)
+  }
+
+  def both[A, B](ra: Rand[A], rb: Rand[B]): Rand[(A, B)] = map2(ra, rb)((_, _))
+
+  def _randIntDouble: Rand[(Int, Double)] = both(int, _double)
+
+  def _randDoubleInt: Rand[(Double, Int)] = both(_double, int)
+
+  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = fs.foldRight(unit(List[A]()))((f, acc) => map2(f, acc)(_ :: _))
+
+  def _ints(count: Int): Rand[List[Int]] = sequence(List.fill(count)(int))
 
   def nonNegativeEven: Rand[Int] = map(nonNegativeInt)(i => i - i % 2)
 }
@@ -78,4 +93,6 @@ object random extends App {
   println(SimpleRNG.double(SimpleRNG(1223))._1)
   println(SimpleRNG.ints(20)(SimpleRNG(26051989)))
   println(SimpleRNG.nonNegativeEven(SimpleRNG(123)))
+  println(SimpleRNG._double(SimpleRNG(26051989)))
+  println(SimpleRNG._ints(20)(SimpleRNG(26051989)))
 }
