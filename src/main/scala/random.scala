@@ -62,6 +62,7 @@ object SimpleRNG {
 
   def map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
     val (a, rng2) = s(rng)
+    println(rng2)
     (f(a), rng2)
   }
 
@@ -94,5 +95,6 @@ object random extends App {
   println(SimpleRNG.ints(20)(SimpleRNG(26051989)))
   println(SimpleRNG.nonNegativeEven(SimpleRNG(123)))
   println(SimpleRNG._double(SimpleRNG(26051989)))
+  println(SimpleRNG.both(SimpleRNG.int, SimpleRNG.int)(SimpleRNG(26051989)))
   println(SimpleRNG._ints(20)(SimpleRNG(26051989)))
 }

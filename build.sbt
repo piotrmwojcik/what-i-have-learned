@@ -1,4 +1,4 @@
-name := "TwitterSentiments"
+name := "what-i-have-learned"
 
 version := "0.1"
 
