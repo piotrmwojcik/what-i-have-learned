@@ -62,7 +62,6 @@ object SimpleRNG {
 
   def map[A, B](s: Rand[A])(f: A => B): Rand[B] = rng => {
     val (a, rng2) = s(rng)
-    println(rng2)
     (f(a), rng2)
   }
 
@@ -85,6 +84,24 @@ object SimpleRNG {
   def _ints(count: Int): Rand[List[Int]] = sequence(List.fill(count)(int))
 
   def nonNegativeEven: Rand[Int] = map(nonNegativeInt)(i => i - i % 2)
+
+  def nonNegativeLessThan(n: Int): Rand[Int] = { rng =>
+    val (i, rng2) = nonNegativeInt(rng)
+    val mod = i % n
+    if (i + (n - 1) - mod >= 0) (mod, rng2)
+    else nonNegativeLessThan(n)(rng)
+  }
+
+  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] = { rng =>
+    val (i, rng2) = f(rng)
+    g(i)(rng2)
+  }
+
+  def _map[A, B](s: Rand[A])(f: A => B): Rand[B] = flatMap(s)(a => unit(f(a)))
+
+  def _nonNegativeLessThan(n: Int): Rand[Int] = flatMap(nonNegativeInt) { i  =>
+    if (i + (n - 1) - (i % n) >= 0) unit(i % n) else nonNegativeLessThan(n)
+  }
 }
 
 object random extends App {
