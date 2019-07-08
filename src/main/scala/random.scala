@@ -12,9 +12,9 @@ case class SimpleRNG(seed: Long) extends RNG {
   }
 }
 
-object SimpleRNG {
+/*object SimpleRNG {
   def nonNegativeInt(rng: RNG): (Int, RNG) = {
-    val (i, r) = rng.nextInt
+    val (i, r) = rngv.nextInt
     (if (i < 0) -(i + 1) else i, r)
   }
 
@@ -102,9 +102,32 @@ object SimpleRNG {
   def _nonNegativeLessThan(n: Int): Rand[Int] = flatMap(nonNegativeInt) { i  =>
     if (i + (n - 1) - (i % n) >= 0) unit(i % n) else nonNegativeLessThan(n)
   }
+
+  def _map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = flatMap(ra)(a => _map(rb)(b => f(a, b)))
+}*/
+
+case class State[S, +A](run: S => (A, S)) {
+  def flatMap[A, B](g: A => State[S, B]): State[S, B] = {
+    val (i, s2) = run(this)
+    g(i)(s2)
+  }
+
+  def map[A, B](f: A => B): State[S, B] = flatMap(a => State.unit(f(a)))
+
+  def map2[A, B, C](ra: State[S, A], rb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => map(b => f(a, b)))
 }
 
+object State {
+  def unit[S, A](a: A): State[S, A] = State(s => (a, s))
+
+  type Rand[A] = State[RNG, A]
+
+}
+
+
 object random extends App {
+  println(SimpleRNG.map2(SimpleRNG.int, SimpleRNG.int)((_, _))(SimpleRNG(123)))
+  /*println(SimpleRNG.both(SimpleRNG.int, SimpleRNG.int)(SimpleRNG(123)))
   println(SimpleRNG.int(SimpleRNG(123)))
   println(SimpleRNG.unit(5)(SimpleRNG(123)))
   println(SimpleRNG.nonNegativeInt(SimpleRNG(21989))._1)
@@ -113,5 +136,5 @@ object random extends App {
   println(SimpleRNG.nonNegativeEven(SimpleRNG(123)))
   println(SimpleRNG._double(SimpleRNG(26051989)))
   println(SimpleRNG.both(SimpleRNG.int, SimpleRNG.int)(SimpleRNG(26051989)))
-  println(SimpleRNG._ints(20)(SimpleRNG(26051989)))
+  println(SimpleRNG._ints(20)(SimpleRNG(26051989)))*/
 }
