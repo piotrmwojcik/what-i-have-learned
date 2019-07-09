@@ -122,11 +122,12 @@ object State {
 
   type Rand[A] = State[RNG, A]
 
+  def int: Rand[Int] = r => r.nextInt
 }
 
 
 object random extends App {
-  println(SimpleRNG.map2(SimpleRNG.int, SimpleRNG.int)((_, _))(SimpleRNG(123)))
+  println(SimpleRNG.map2(SimpleRNG.int, SimpleRNG.int)((  _, _))(SimpleRNG(123)))
   /*println(SimpleRNG.both(SimpleRNG.int, SimpleRNG.int)(SimpleRNG(123)))
   println(SimpleRNG.int(SimpleRNG(123)))
   println(SimpleRNG.unit(5)(SimpleRNG(123)))
