@@ -1,3 +1,4 @@
+import State.{Rand, unit}
 
 trait RNG {
   def nextInt: (Int, RNG) // Should generate a random `Int`. We'll later define other functions in terms of `nextInt`.
@@ -107,14 +108,16 @@ case class SimpleRNG(seed: Long) extends RNG {
 }*/
 
 case class State[S, +A](run: S => (A, S)) {
-  def flatMap[A, B](g: A => State[S, B]): State[S, B] = {
-    val (i, s2) = run(this)
-    g(i)(s2)
-  }
+  def flatMap[B](g: A => State[S, B]): State[S, B] = State(s => {
+    val (i, s2) = run(s)
+    g(i).run(s2)
+  })
 
-  def map[A, B](f: A => B): State[S, B] = flatMap(a => State.unit(f(a)))
+  def map[B](f: A => B): State[S, B] = flatMap(a => State.unit(f(a)))
 
-  def map2[A, B, C](ra: State[S, A], rb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => map(b => f(a, b)))
+  def map2[B, C](sb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => sb.map(b => f(a, b)))
+
+  def both[B](rb: State[S, B]): State[S, (A, B)] = map2(rb)((_, _))
 }
 
 object State {
@@ -122,20 +125,43 @@ object State {
 
   type Rand[A] = State[RNG, A]
 
-  def int: Rand[Int] = r => r.nextInt
+  val int: Rand[Int] = State(s => {
+    val (i, s2) = s.nextInt
+    (i, s2)
+  })
+
+  val nonNegativeInt: Rand[Int] = State(s => {
+    val (i, r) = s.nextInt
+    (if (i < 0) -(i + 1) else i, r)
+  })
+
+  val nonNegativeEven: Rand[Int] = nonNegativeInt.map(i => i - i % 2)
+
+  def double: Rand[Double] = State(s => {
+    val (i, r) = nonNegativeInt.run(s)
+    (i / (Int.MaxValue.toDouble + 1), r)
+  })
+
+  def nonNegativeLessThan(n: Int): Rand[Int] = State(s => {
+    val (i, rng2) = nonNegativeInt.run(s)
+    val mod = i % n
+    if (i + (n - 1) - mod >= 0) (mod, rng2)
+    else nonNegativeLessThan(n).run(s)
+  })
+
+  def sequence[S, A](fs: List[State[S, A]]): State[S, List[A]]
+  = fs.foldRight(unit(List[A]()): State[S, List[A]])((f, acc) => f.map2(acc)(_ :: _))
+
+  def ints(count: Int): Rand[List[Int]] = sequence(List.fill(count)(int))
 }
 
-
 object random extends App {
-  println(SimpleRNG.map2(SimpleRNG.int, SimpleRNG.int)((  _, _))(SimpleRNG(123)))
-  /*println(SimpleRNG.both(SimpleRNG.int, SimpleRNG.int)(SimpleRNG(123)))
-  println(SimpleRNG.int(SimpleRNG(123)))
-  println(SimpleRNG.unit(5)(SimpleRNG(123)))
-  println(SimpleRNG.nonNegativeInt(SimpleRNG(21989))._1)
-  println(SimpleRNG.double(SimpleRNG(1223))._1)
-  println(SimpleRNG.ints(20)(SimpleRNG(26051989)))
-  println(SimpleRNG.nonNegativeEven(SimpleRNG(123)))
-  println(SimpleRNG._double(SimpleRNG(26051989)))
-  println(SimpleRNG.both(SimpleRNG.int, SimpleRNG.int)(SimpleRNG(26051989)))
-  println(SimpleRNG._ints(20)(SimpleRNG(26051989)))*/
+  println(State.int.map2(State.int)((  _, _)).run(SimpleRNG(123)))
+  println(State.int.both(State.int).run(SimpleRNG(123)))
+  println(State.int.run(SimpleRNG(123)))
+  println(State.unit(5).run(SimpleRNG(123)))
+  println(State.nonNegativeInt.run(SimpleRNG(21989)))
+  println(State.double.run(SimpleRNG(1223)))
+  println(State.ints(20).run(SimpleRNG(26051989)))
+  println(State.nonNegativeEven.run(SimpleRNG(123)))
 }
