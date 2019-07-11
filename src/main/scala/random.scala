@@ -179,8 +179,10 @@ object Machine {
       case Coin => (m: Machine) => if (m.candies > 0) Machine(locked = false, m.candies, m.coins + 1) else m
       case Turn => (m: Machine) => if (!m.locked && m.candies > 0) Machine(locked = true, m.candies - 1, m.coins) else m
     }))
-    val dupa = a.foldRight(State.unit[Machine, Unit](()))((x, acc) => x.flatMap(_ => acc)).get
-    dupa.map(m => (m.candies, m.coins))
+    State(s => {
+      val (_, s2) = a.foldRight(State.unit[Machine, Unit](()))((x, acc) => x.flatMap(_ => acc)).run(s)
+      ((s2.coins, s2.candies), s2)
+    })
   }
 }
 
@@ -200,8 +202,8 @@ object random extends App {
   val b = State.unit[Machine, Unit](()).modify(m => Machine(m.locked, m.candies, m.coins - 1))
 
   println(a.flatMap(_ => b.flatMap(_ => State.unit[Machine, Unit](()))).run(m))
-  println(List(a, b).foldRight(State.unit[Machine, Unit](()))((x, acc) => x.flatMap(_ => acc)).get.map(m => (m.candies, m.coins)).run(m))
-  //println(Machine.simulateMachine(List(Coin, Turn, Coin, Turn, Coin, Turn, Coin, Turn)).run(m))
+  //println(List(a, b).foldRight(State.unit[Machine, Unit](()))((x, acc) => x.flatMap(_ => acc)).get.map(m => (m.candies, m.coins)).run(m))
+  println(Machine.simulateMachine(List(Coin, Turn, Coin, Turn, Coin, Turn, Coin, Turn)).run(m))
 
   val ns: Rand[List[Int]] = for {
     x <- State.int
