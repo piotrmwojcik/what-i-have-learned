@@ -1,4 +1,4 @@
-import State.{Rand, get, unit}
+import State.Rand
 
 trait RNG {
   def nextInt: (Int, RNG) // Should generate a random `Int`. We'll later define other functions in terms of `nextInt`.
@@ -121,6 +121,8 @@ case class State[S, +A](run: S => (A, S)) {
 
   def set(s: S): State[S, Unit] = State(_ => ((), s))
 
+  def get: State[S, S] = State(s => (s, s))
+
   def modify(f: S => S): State[S, Unit] = for {
     s <- get
     _ <- set(f(s))
@@ -162,43 +164,44 @@ object State {
 
   def ints(count: Int): Rand[List[Int]] = sequence(List.fill(count)(int))
 
-  def get[S]: State[S, S] = State(s => (s, s))
+
 }
 
 sealed trait Input
 case object Coin extends Input
 case object Turn extends Input
 
-case class Machine(locked: Boolean, candies: Int, coins: Int) {
-
-}
+case class Machine(locked: Boolean, candies: Int, coins: Int)
 
 object Machine {
-  def f(i: Input): Machine => Machine = i match {
-    case Coin => (m: Machine) => if (m.candies > 0) Machine(m.locked, m.candies, m.coins) else m
-    case Turn => (m: Machine) => if (!m.locked && m.candies > 0) Machine(locked = true, m.candies - 1, m.coins) else m
-  }
-
   def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
-    State[Machine, (Int, Int)](s => {
-      val (_, ss) = inputs.foldLeft(unit[Machine, Unit](()))((acc, i) => acc.modify(i match {
-        case Coin => (m: Machine) => if (m.candies > 0) Machine(m.locked, m.candies, m.coins) else m
-        case Turn => (m: Machine) => if (!m.locked && m.candies > 0) Machine(locked = true, m.candies - 1, m.coins) else m
-      })).run(s)
-      ((ss.coins, ss.candies), ss)
-    })
+    val a = inputs.map(i => State.unit[Machine, Unit](()).modify(i match {
+      case Coin => (m: Machine) => if (m.candies > 0) Machine(locked = false, m.candies, m.coins + 1) else m
+      case Turn => (m: Machine) => if (!m.locked && m.candies > 0) Machine(locked = true, m.candies - 1, m.coins) else m
+    }))
+    val dupa = a.foldRight(State.unit[Machine, Unit](()))((x, acc) => x.flatMap(_ => acc)).get
+    dupa.map(m => (m.candies, m.coins))
   }
 }
 
 object random extends App {
-  println(State.int.map2(State.int)((  _, _)).run(SimpleRNG(123)))
+  /*println(State.int.map2(State.int)((  _, _)).run(SimpleRNG(123)))
   println(State.int.both(State.int).run(SimpleRNG(123)))
   println(State.int.run(SimpleRNG(123)))
   println(State.unit(5).run(SimpleRNG(123)))
   println(State.nonNegativeInt.run(SimpleRNG(21989)))
   println(State.double.run(SimpleRNG(1223)))
   println(State.ints(20).run(SimpleRNG(26051989)))
-  println(State.nonNegativeEven.run(SimpleRNG(123)))
+  println(State.nonNegativeEven.run(SimpleRNG(123)))*/
+
+  val m = Machine(locked = true, 5, 10)
+
+  val a = State.unit[Machine, Unit](()).modify(m => Machine(m.locked, m.candies + 1, m.coins))
+  val b = State.unit[Machine, Unit](()).modify(m => Machine(m.locked, m.candies, m.coins - 1))
+
+  println(a.flatMap(_ => b.flatMap(_ => State.unit[Machine, Unit](()))).run(m))
+  println(List(a, b).foldRight(State.unit[Machine, Unit](()))((x, acc) => x.flatMap(_ => acc)).get.map(m => (m.candies, m.coins)).run(m))
+  //println(Machine.simulateMachine(List(Coin, Turn, Coin, Turn, Coin, Turn, Coin, Turn)).run(m))
 
   val ns: Rand[List[Int]] = for {
     x <- State.int
