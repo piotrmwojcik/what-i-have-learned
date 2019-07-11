@@ -1,4 +1,4 @@
-import State.{Rand, unit}
+import State.{Rand, get, unit}
 
 trait RNG {
   def nextInt: (Int, RNG) // Should generate a random `Int`. We'll later define other functions in terms of `nextInt`.
@@ -118,6 +118,14 @@ case class State[S, +A](run: S => (A, S)) {
   def map2[B, C](sb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => sb.map(b => f(a, b)))
 
   def both[B](rb: State[S, B]): State[S, (A, B)] = map2(rb)((_, _))
+
+  def set(s: S): State[S, Unit] = State(_ => ((), s))
+
+  def modify(f: S => S): State[S, Unit] = for {
+    s <- get
+    _ <- set(f(s))
+  } yield ()
+
 }
 
 object State {
@@ -153,6 +161,33 @@ object State {
   = fs.foldRight(unit(List[A]()): State[S, List[A]])((f, acc) => f.map2(acc)(_ :: _))
 
   def ints(count: Int): Rand[List[Int]] = sequence(List.fill(count)(int))
+
+  def get[S]: State[S, S] = State(s => (s, s))
+}
+
+sealed trait Input
+case object Coin extends Input
+case object Turn extends Input
+
+case class Machine(locked: Boolean, candies: Int, coins: Int) {
+
+}
+
+object Machine {
+  def f(i: Input): Machine => Machine = i match {
+    case Coin => (m: Machine) => if (m.candies > 0) Machine(m.locked, m.candies, m.coins) else m
+    case Turn => (m: Machine) => if (!m.locked && m.candies > 0) Machine(locked = true, m.candies - 1, m.coins) else m
+  }
+
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
+    State[Machine, (Int, Int)](s => {
+      val (_, ss) = inputs.foldLeft(unit[Machine, Unit](()))((acc, i) => acc.modify(i match {
+        case Coin => (m: Machine) => if (m.candies > 0) Machine(m.locked, m.candies, m.coins) else m
+        case Turn => (m: Machine) => if (!m.locked && m.candies > 0) Machine(locked = true, m.candies - 1, m.coins) else m
+      })).run(s)
+      ((ss.coins, ss.candies), ss)
+    })
+  }
 }
 
 object random extends App {
@@ -164,4 +199,10 @@ object random extends App {
   println(State.double.run(SimpleRNG(1223)))
   println(State.ints(20).run(SimpleRNG(26051989)))
   println(State.nonNegativeEven.run(SimpleRNG(123)))
+
+  val ns: Rand[List[Int]] = for {
+    x <- State.int
+    y <- State.int
+    xs <- State.ints(x)
+  } yield xs.map(_ % y)
 }
