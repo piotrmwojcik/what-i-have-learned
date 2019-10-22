@@ -17,19 +17,27 @@ struct Edge {
 std::vector<std::vector<Edge> > G;
 
 std::vector<Edge*> bfs() {	
-	std::vector<int> visited(n + 2, false);
+	std::vector<int> prev(n + 2, -1);
+	std::vector<int> id(n + 2, -1);
 	std::queue<int> Q;
-	visited[0] = true;
 	Q.push_back(0);
 	
+	while (!Q.empty()) {
+		auto v = Q.top();
+		Q.pop();
+		id[0] = -5;
+		for (auto i = G[v].begin(); i != G[v].end(); ++i) {
+			
+		}
+	}
 }
 
 void push(std::vector<Edge*> ev) {
 	
 }
 
-int main() {
-	std::cin >> n >> m;
+int main() {	
+	std::cin >> n >> m; 
 	G.resize(n + 2);
 	x.resize(n + 2);
 	for (auto i = 1; i <= n; ++i) {
@@ -38,9 +46,12 @@ int main() {
 	}
 	for (auto i = 0; i < m; ++i) {
 		int a, b; std::cin >> a >> b;
-		auto 
-		G[a].push_back(Edge {b, 0, std::numeric_limits<int>::max()});
-		G[b].push_back(Edge {a, 0, std::numeric_limits<int>::max()});
+		std::cout << a << "->" << b << "\n";
+		auto e1 = Edge {b, 0, std::numeric_limits<int>::max()};
+		auto e2 = Edge {a, 0, std::numeric_limits<int>::max()};
+		e1.rev = &e2; e2.rev = &e1;
+		G[a].push_back(e1);
+		G[b].push_back(e2);
 	}
 	
 	int xmin = *std::min_element(x.begin(), x.end()), ymin = *std::min_element(y.begin(), y.end());
@@ -53,7 +64,22 @@ int main() {
 	//(xmax + epsilon, 0.5 * (ymax + ymin))
 	x[n] = xmin + epsilon; y[n] = 0.5 * (ymax + ymin);
 	
-	for (auto i = 1; i < n; ++i) G[0].push_back(Edge {i, 0, 1});
-	for (auto i = 1; i < n; ++i) G[i].push_back(Edge {n, 0, 1});
+	for (auto i = 1; i < n; ++i) {
+		auto e1 = Edge {i, 0, 1};
+		auto e2 = Edge {0, 0, 1};
+		e1.rev = &e2;
+		e2.rev = &e1;
+		G[0].push_back(e1);
+		G[i].push_back(e2);
+		
+	}
+	for (auto i = 1; i < n; ++i) {
+		auto e1 = Edge {n, 0, 1};
+		auto e2 = Edge {0, 0, 1};
+		e1.rev = &e2;
+		e2.rev = &e1;
+		G[i].push_back(e1);
+		G[n].push_back(e2);
+	}
 	return 0;
 }
