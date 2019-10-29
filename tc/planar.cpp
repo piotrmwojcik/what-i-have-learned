@@ -18,32 +18,51 @@ std::vector<std::vector<Edge> > G;
 
 std::vector<Edge*> bfs() {	
 	std::vector<int> prev(n + 2, -1);
-	std::vector<int> id(n + 2, -1);
+	std::vector<Edge*> id(n + 2, NULL);
+	std::vector<int> visited(n + 2, false);
 	std::queue<int> Q;
-	Q.push_back(0);
-	
+	Q.push(0);
 	while (!Q.empty()) {
-		auto v = Q.top();
-		Q.pop();
-		id[0] = -5;
+		auto v = Q.front();
+		visited[v] = true;
 		for (auto i = G[v].begin(); i != G[v].end(); ++i) {
-			
+			auto e = *i;
+			if (e.c - e.f <= 0) continue;
+			if (visited[e.v]) continue;
+			Q.push(e.v);
+			id[e.v] = &e;
+			prev[e.v] = v;
 		}
 	}
+	if (!visited[n]) return std::vector<Edge*> ();
+	std::vector<Edge*> ret;
+	int k = n;	
+	while (id[k]) {
+		ret.push_back(id[k]);
+		k = prev[k];
+	}
+	return ret;
 }
 
-void push(std::vector<Edge*> ev) {
-	
+
+void flow() {
+	while (!bfs().empty()) {
+		
+	}
 }
 
 int main() {	
 	std::cin >> n >> m; 
 	G.resize(n + 2);
 	x.resize(n + 2);
+	y.resize(n + 2);
+	
 	for (auto i = 1; i <= n; ++i) {
 		int a, b; std::cin >> a >> b;
 		x[i] = a; y[i] = b;
 	}
+	//std::cout << "dupa" << "\n";
+	
 	for (auto i = 0; i < m; ++i) {
 		int a, b; std::cin >> a >> b;
 		std::cout << a << "->" << b << "\n";
@@ -62,7 +81,10 @@ int main() {
 	x[0] = xmin - epsilon; y[0] = 0.5 * (ymax + ymin);
 	
 	//(xmax + epsilon, 0.5 * (ymax + ymin))
-	x[n] = xmin + epsilon; y[n] = 0.5 * (ymax + ymin);
+	x[n] = xmax + epsilon; y[n] = 0.5 * (ymax + ymin);
+	
+	std::cout << x[0] << "  " << y[0] << std::endl;
+	std::cout << x[n] << "  " << y[n] << std::endl;
 	
 	for (auto i = 1; i < n; ++i) {
 		auto e1 = Edge {i, 0, 1};
@@ -81,5 +103,6 @@ int main() {
 		G[i].push_back(e1);
 		G[n].push_back(e2);
 	}
+	flow();
 	return 0;
 }
