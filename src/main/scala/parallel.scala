@@ -4,7 +4,6 @@ import java.util.concurrent.{Callable, ExecutorService, Future, TimeUnit}
 import scala.concurrent.duration.TimeUnit
 
 
-
 object Par {
 
   type Par[A] = ExecutorService => Future[A]
@@ -25,7 +24,7 @@ object Par {
     new Future[C] {
       def isDone = isDone
 
-      def get = get()
+      def get: C = get()
 
       def get(timeout: Long, unit: TimeUnit) = {
         val ts = Instant.now.toEpochMilli
@@ -48,6 +47,8 @@ object Par {
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
   def asyncF[A, B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
+
+  def map[A, B](pa: Par[A])(f: A => B): Par[B] = map2(pa, unit(()))((a, _) => f(a))
 }
 
 object testApp1 extends App {
